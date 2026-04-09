@@ -14,7 +14,7 @@ include_directories(include)
 # Liet ke cac file nguon (se tao sau)
 set(SOURCE_FILES
     src/accelerometer_processor.cpp
-    src/data_logger.cpp
+    # src/data_logger.cpp
 )
 
 # Tao thu vien shared library de Flutter FFI co the goi

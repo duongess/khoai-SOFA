@@ -14,6 +14,7 @@ dependencies:
   path_provider: ^2.1.1
   # Quan ly trang thai app
   cupertino_icons: ^1.0.2
+  sensors_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

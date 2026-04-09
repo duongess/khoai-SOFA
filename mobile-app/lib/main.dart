@@ -32,13 +32,23 @@ class _SensorScreenState extends State<SensorScreen> {
   }
 
   void _start() {
+    debugPrint("Bat dau nghe cam bien...");
     _sub = accelerometerEvents.listen((event) {
-      // Truyen xuong C++
-      _core.pushData(event.x, event.y, event.z);
-      // Cap nhat UI
+      // 1. Kiem tra xem Stream co chay vao day khong
+      debugPrint("Du lieu moi: ${event.x}, ${event.y}, ${event.z}");
+      
       setState(() {
         _accel = [event.x, event.y, event.z];
       });
+
+      // 2. Tam thoi boc FFI trong try-catch de tranh treo Stream
+      try {
+        _core.pushData(event.x, event.y, event.z);
+      } catch (e) {
+        debugPrint("Loi goi C++: $e");
+      }
+    }, onError: (error) {
+      debugPrint("Loi Stream cam bien: $error");
     });
   }
 

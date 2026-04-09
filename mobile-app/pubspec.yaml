@@ -1,0 +1,25 @@
+name: khoai_sofa_collection
+description: App thu thap du lieu gia toc cho du an khoai-SOFA.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Ho tro goi code C++ tu Dart
+  ffi: ^2.1.0
+  # Lay duong dan luu file CSV
+  path_provider: ^2.1.1
+  # Quan ly trang thai app
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Tu dong sinh code ffi neu can
+  ffigen: ^8.0.2
+
+flutter:
+  uses-material-design: true

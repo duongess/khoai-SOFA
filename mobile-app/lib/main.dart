@@ -70,7 +70,7 @@ class _TrainerScreenState extends State<TrainerScreen> {
       _isRecording = true;
       _status = "Dang ghi du lieu...";
       _buffer.clear();
-      _buffer.add("timestamp,x,y,z"); // Tieu de CSV
+      _buffer.add("timestamp,x,y,z");
     });
 
     _sub = accelerometerEvents.listen((event) {

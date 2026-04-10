@@ -1,10 +1,11 @@
 #include <vector>
+#include <cmath>
+#include <queue>
 
 // Su dung bo dem vong (Circular Buffer) de toi uu viec them/xoa 50 mau
 const int WINDOW_SIZE = 50;
-std::vector<float> buffer_x(WINDOW_SIZE, 0.0f);
-std::vector<float> buffer_y(WINDOW_SIZE, 0.0f);
-std::vector<float> buffer_z(WINDOW_SIZE, 0.0f);
+std::queue<float> magnitude_queue;
+
 int current_index = 0;
 
 extern "C" {
@@ -13,26 +14,33 @@ extern "C" {
         current_index = 0;
     }
 
-    // Nhan du lieu, dua vao bo dem vong va tinh toan logic
-    // Tra ve 1 neu phat hien vuot nguong, 0 neu binh thuong
-    int push_and_check(float x, float y, float z) {
-        // Ghi de du lieu cu nhat (Tu dong xoa du lieu cu, hoat dong nhu Queue)
-        buffer_x[current_index] = x;
-        buffer_y[current_index] = y;
-        buffer_z[current_index] = z;
-        
-        current_index = (current_index + 1) % WINDOW_SIZE;
-
-        // Tinh binh phuong do lon G de toi uu, bo qua phep sqrt nang ne
-        float g_squared = (x * x) + (y * y) + (z * z);
-        
-        // Vi du: Nguong gia toc nguyen hiem la 3.0 G (G_Gravity ~ 9.8 m/s^2)
-        // 3.0 * 9.8 = 29.4 -> Binh phuong len khoang 864.0
-        float threshold_squared = 864.0f; 
-
-        if (g_squared > threshold_squared) {
-            return 1; // Canh bao
+    void push_data(float x, float y, float z) {
+        float magnitude = sqrt(x * x + y * y + z * z);
+        magnitude_queue.push(magnitude);
+        if (magnitude_queue.size() > WINDOW_SIZE) {
+            magnitude_queue.pop();
         }
-        return 0; // Binh thuong
+        this->ai_process(); // Goi ham xu ly AI sau khi them du lieu moi
+    }
+    
+    void ai_process() {
+        // Tinh toan trung binh va phat hien buoc di
+        if (magnitude_queue.size() < WINDOW_SIZE) {
+            return; // Chua du du lieu
+        }
+
+        float sum = 0.0f;
+        std::queue<float> temp_queue = magnitude_queue; // Sao chep de tinh toan
+        while (!temp_queue.empty()) {
+            sum += temp_queue.front();
+            temp_queue.pop();
+        }
+        float average = sum / WINDOW_SIZE;
+
+        // Phat hien buoc di (gia su nguong la 1.2)
+        if (average > 1.2f) {
+            // Phat hien buoc di
+            // Co the them code de gui thong bao ve Dart o day
+        }
     }
 }

@@ -49,3 +49,20 @@ android {
 flutter {
     source = "../.."
 }
+
+subprojects {
+    afterEvaluate {
+        // Ep trinh bien dich Kotlin su dung muc JVM 17
+        project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            }
+        }
+        
+        // Ep trinh bien dich Java su dung muc JVM 17
+        project.tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = "17"
+            targetCompatibility = "17"
+        }
+    }
+}

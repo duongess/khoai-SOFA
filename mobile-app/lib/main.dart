@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:math';
 // import 'ffi_bridge.dart'; // Tam thoi an FFI de tap trung vao thu thap du lieu
 
 void main() => runApp(const MyApp());
@@ -60,28 +62,99 @@ class TrainerScreen extends StatefulWidget {
 }
 
 class _TrainerScreenState extends State<TrainerScreen> {
-  StreamSubscription? _sub;
-  List<String> _buffer = []; // Bo dem luu tru truoc khi ghi file
+  // Khai báo các biến lắng nghe luồng sự kiện cảm biến
+  StreamSubscription? _accelSub;
+  StreamSubscription? _gyroSub;
+  StreamSubscription? _magSub;
+  StreamSubscription? _pressureSub;
+  
+  List<String> _buffer = []; 
   bool _isRecording = false;
   String _status = "San sang";
+  String _deviceId = "unknown_device";
 
-  void _startRecording() {
+  // Các biến lưu trạng thái tức thời của các cảm biến phụ
+  double? _gyroX, _gyroY, _gyroZ;
+  double? _magX, _magY, _magZ;
+  double? _pressure;
+
+  void _startRecording() async {
     setState(() {
       _isRecording = true;
       _status = "Dang ghi du lieu...";
       _buffer.clear();
-      _buffer.add("timestamp,x,y,z");
+      // Cập nhật tiêu đề CSV với các trường dữ liệu mới
+      _buffer.add("timestamp,accel_x,accel_y,accel_z,accel_mag,gyro_x,gyro_y,gyro_z,mag_x,mag_y,mag_z,pressure");
     });
 
-    _sub = accelerometerEvents.listen((event) {
-      // Luu du lieu vao bo dem kem thoi gian thuc de tien chuan hoa
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _buffer.add("$timestamp,${event.x},${event.y},${event.z}");
+    // Bắt đầu lắng nghe Con quay hồi chuyển (Gyroscope)
+    _gyroSub = gyroscopeEvents.listen((event) {
+      _gyroX = event.x;
+      _gyroY = event.y;
+      _gyroZ = event.z;
+    }, onError: (_) {
+      // Nếu thiết bị không hỗ trợ, biến sẽ giữ giá trị null
+      _gyroX = null; _gyroY = null; _gyroZ = null;
     });
+
+    // Bắt đầu lắng nghe Cảm biến định hướng (Magnetometer)
+    _magSub = magnetometerEvents.listen((event) {
+      _magX = event.x;
+      _magY = event.y;
+      _magZ = event.z;
+    }, onError: (_) {
+      // Nếu thiết bị không hỗ trợ, biến sẽ giữ giá trị null
+      _magX = null; _magY = null; _magZ = null;
+    });
+
+    _pressureSub = barometerEventStream().listen(
+      (BarometerEvent event) {
+        // Cap nhat gia tri ap suat tu sensors_plus
+        _pressure = event.pressure; 
+      },
+      onError: (error) {
+        // Neu thiet bi khong co hoac bi loi cam bien
+        _pressure = null; 
+      },
+      cancelOnError: true,
+    );
+
+    // Lắng nghe Gia tốc kế (Dùng làm sự kiện chính để ghi 1 dòng CSV)
+    _accelSub = accelerometerEvents.listen((event) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      // Tính độ lớn gia tốc tổng hợp
+      final accelMag = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+
+      // Ghép dữ liệu. Ký pháp ?? 'null' đảm bảo ghi chữ 'null' nếu giá trị bị khuyết
+      _buffer.add(
+        "$timestamp,${event.x},${event.y},${event.z},$accelMag,"
+        "${_gyroX ?? 'null'},${_gyroY ?? 'null'},${_gyroZ ?? 'null'},"
+        "${_magX ?? 'null'},${_magY ?? 'null'},${_magZ ?? 'null'},"
+        "${_pressure ?? 'null'}"
+      );
+    });
+
+    final deviceInfo = DeviceInfoPlugin();
+
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      // Su dung ten dong may (VD: SM-G998B) rat huu ich cho viec huan luyen AI sau nay
+      String rawId = androidInfo.model; 
+      
+      // Lam sach chuoi: Thay the tat ca ky tu khong phai chu cai va so thanh dau gach duoi
+      _deviceId = rawId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      String rawId = iosInfo.name ?? 'ios_device';
+      _deviceId = rawId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+    }
   }
 
   Future<void> _stopAndSave() async {
-    _sub?.cancel();
+    _accelSub?.cancel();
+    _gyroSub?.cancel();
+    _magSub?.cancel();
+    _pressureSub?.cancel();
     setState(() {
       _isRecording = false;
       _status = "Dang xin quyen bo nho...";
@@ -121,7 +194,7 @@ class _TrainerScreenState extends State<TrainerScreen> {
       }
 
       // Tao file CSV va ghi du lieu
-      final file = File('${directory.path}/fall_data_${DateTime.now().millisecondsSinceEpoch}.csv');
+      final file = File('${directory.path}/${_deviceId}_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(_buffer.join('\n'));
       
       setState(() {
@@ -136,7 +209,10 @@ class _TrainerScreenState extends State<TrainerScreen> {
 
   @override
   void dispose() {
-    _sub?.cancel();
+    _accelSub?.cancel();
+    _gyroSub?.cancel();
+    _magSub?.cancel();
+    _pressureSub?.cancel();
     super.dispose();
   }
 

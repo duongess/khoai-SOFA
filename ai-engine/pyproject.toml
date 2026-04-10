@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "khoai-sofa-ai-engine"
+version = "0.1.0"
+description = "Engine phân tích dữ liệu gia tốc"
+authors = ["Your Name"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.0.0"
+numpy = "^1.24.0"
+matplotlib = "^3.7.0"
+plotly = "^5.15.0"
+scipy = "^1.10.0"
+requests = "^2.31.0"
+idna = "^3.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
